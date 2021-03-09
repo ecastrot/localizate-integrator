@@ -13,10 +13,16 @@ public class IntegrationControlT {
 
   @Value("${integration.controlt.time}")
   private long time;
+  
+  @Value("${integration.controlt.user}")
+  private String user;
+
+  @Value("${integration.controlt.pass}")
+  private String pass;
 
   @PostConstruct
   public void init() {
-    IntegrationControlTTask task = new IntegrationControlTTask();
+    IntegrationControlTTask task = new IntegrationControlTTask(user, pass);
     Timer timer = new Timer();
     timer.scheduleAtFixedRate(task, 0L, time);
   }
