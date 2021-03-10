@@ -69,4 +69,8 @@ public class IntegrationControlTData {
     this.controlTData = controlTData;
   }
 
+  public String getPlates() {
+    return "plates";
+  }
+
 }
