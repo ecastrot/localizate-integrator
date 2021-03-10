@@ -1,0 +1,151 @@
+body{
+	background-color: rgb(28,31,34);
+	font-family: 'Open Sans', sans-serif;
+}
+
+.general-container{
+	display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 90vh;
+}
+
+.main-container{
+    background-color: white;
+    padding: 1em;
+    min-width: 40em;
+    border-radius: 10px;	
+    position: relative;
+}
+
+.sincronizing span{
+    color: #65af21;
+    font-weight: bold;
+    position: absolute;
+    top: 1em;
+    right: 4em;
+    animation: blink 1s linear infinite;
+}
+
+.sincronizing img{
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 4em;
+}
+
+.stop span{
+    color: #f50000;
+    font-weight: bold;
+    position: absolute;
+    top: 12px;
+    right: 50px;
+    animation: blink 0.5s linear infinite;
+}
+
+.stop img{
+    position: absolute;
+    top: 6px;
+    right: 10px;
+    width: 2em;
+}
+
+.lastUpdate{
+	font-size: 14px;
+    position: absolute;
+    right: 10px;
+    top: 40px;
+    font-weight: 600;
+    font-style: italic;
+}
+
+
+@keyframes blink{
+	0%{opacity: 0;}
+	50%{opacity: .5;}
+	100%{opacity: 1;}
+}
+
+footer{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-top: 1px solid #d0d0d0;
+    padding: 0.5em;
+    margin-top: 0.5em;
+}
+
+footer img:last-child{
+    width: 10em;
+}
+
+section{
+    display: flex;
+    align-items: center;
+    justify-content: space-evenly;
+}
+
+.plates{
+    background-color: #f3f3f3;
+    height: 15em;
+    padding: 0em 1em;
+    display: flex;
+    flex-direction: column;
+    max-height: 30em;
+    min-height: 20em;
+    overflow: auto;
+}
+
+.action{
+	display:flex;
+	flex-direction: column;
+}
+
+.plates>div{
+	margin: 4px 4px 0px;
+}
+
+.plates a{
+    text-decoration: none;
+    font-weight: bolder;
+    position: relative;
+    top: -2px;
+    font-size: 14px;
+    color: red;
+}
+
+button{
+    background-color: #032a47;
+    border: 0;
+    border-radius: 4px;
+    line-height: 2em;
+    margin: 1em 0em;
+    color: white;
+    font-weight: 700;
+    cursor:pointer;
+}
+
+input{
+    line-height: 1em;
+    padding: 0.5em;
+    font-size: 1em;
+    text-align: center;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: #032a47;
+}
+
+.refresh{
+    display: flex;
+    align-items: center;
+    font-weight: 800;
+    color: blue;
+}
+
+.refresh a{
+	margin-left: 0.5em;
+    text-decoration: none;
+    color: #1e9bc0;
+    font-weight: bolder;
+}
+}
