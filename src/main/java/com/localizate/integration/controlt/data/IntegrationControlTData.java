@@ -53,12 +53,14 @@ public class IntegrationControlTData {
     if (plates == null) {
       plates = new HashSet<>();
     }
+    plate = plate.trim().toUpperCase();
     if (plate.startsWith("-")) {
       String realPlate = plate.substring(1);
       plates.remove(realPlate);
     } else {
       plates.add(plate);
     }
+    writeData();
   }
 
   public ControlTData getControlTData() {
@@ -69,8 +71,8 @@ public class IntegrationControlTData {
     this.controlTData = controlTData;
   }
 
-  public String getPlates() {
-    return "plates";
+  public Set<String> getPlates() {
+    return this.controlTData.getPlates();
   }
 
 }

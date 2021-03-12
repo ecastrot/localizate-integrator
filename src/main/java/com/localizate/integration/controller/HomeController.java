@@ -33,7 +33,9 @@ public class HomeController {
   @RequestMapping("/{plate}")
   public ModelAndView home(@PathVariable("plate")
   String plate) {
-    this.integrationControlTData.controlPlate(plate);
+    if (!"favicon.ico".equals(plate)) {
+      this.integrationControlTData.controlPlate(plate);
+    }
     return home();
   }
 }

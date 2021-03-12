@@ -14,7 +14,9 @@ public class FormatUtil {
   public static final String FORMAT_DATE_CLIENT = "yyyy-MM-dd HH:mm:ss";
 
   public static final String FORMAT_DATE_CONTROL_T = "MM/DD/AAAA";
-
+  
+  public static final String FORMAT_TIME_CONTROL_T = "HH:mm:ss";
+  
   /**
    * Formatea una fecha al formato de fechas definido para el cliente.
    * @param date fecha a formatear
@@ -31,6 +33,15 @@ public class FormatUtil {
    */
   public static String formatDateForControlT(Date date) {
     return formatDateToSpecificFormat(date, FORMAT_DATE_CONTROL_T);
+  }
+  
+  /**
+   * Formatea una fecha al formato de tiempo solicitado por Control Transporte.
+   * @param date fecha a formatear
+   * @return tiempo formateado, o nulo en caso de que no se reciba ninguna fecha
+   */
+  public static String formatTimeForControlT(Date date) {
+    return formatDateToSpecificFormat(date, FORMAT_TIME_CONTROL_T);
   }
 
   /**

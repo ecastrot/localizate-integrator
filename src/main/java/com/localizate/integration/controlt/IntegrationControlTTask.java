@@ -5,21 +5,23 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
+import java.util.Set;
 import java.util.TimerTask;
 
-import org.springframework.beans.factory.annotation.Autowired;
-
-import com.localizate.integration.controlt.data.IntegrationControlTData;
 import com.localizate.integration.controlt.services.InsertEvent;
 import com.localizate.integration.controlt.services.ServiceSoapProxy;
+import com.localizate.integration.services.AddressInfoDto;
+import com.localizate.integration.services.AddressResolver;
+import com.localizate.integration.services.EventGps;
+import com.localizate.integration.services.EventResolver;
 import com.localizate.integration.util.FormatUtil;
+import com.localizate.integration.util.LocalizateRuntimeException;
 
 
 public class IntegrationControlTTask extends TimerTask {
-  
-  @Autowired
-  private IntegrationControlTData integrationControlTData;
 
   private String user;
 
@@ -29,45 +31,63 @@ public class IntegrationControlTTask extends TimerTask {
 
   private Date lastSyncDate;
 
-  public IntegrationControlTTask(String user, String pass) {
+  private Set<String> plates;
+
+  public IntegrationControlTTask(String user, String pass, Set<String> plates) {
     super();
     this.user = user;
     this.pass = pass;
+    this.plates = plates;
   }
 
   private int tries = 1;
 
   @Override
   public void run() {
-    String p = "no";
-    if (this.integrationControlTData != null) {
-      p = this.integrationControlTData.getPlates();
-    }else {
-      p = "no";
-    }
-    System.out.println("plates >> " + p);
-    
-//    query();
-    tries++;
-    synchronizing = tries <= 5;
-    // op1
-    this.lastSyncDate = new Date();
+    //TODO iniciar last sync date, guardar esto en fisico
+    this.lastSyncDate = FormatUtil.getDateFromString("2021-03-11 19:00:00", FormatUtil.FORMAT_DATE_CLIENT);
+    System.out.println("Sync >> " + FormatUtil.formatDateClient(this.lastSyncDate));
 
-//    ServiceSoapProxy s = new ServiceSoapProxy();
-//    try {
-//      String result = s.login(user, pass);
-//      System.out.println("Result login >>> " + result);
-//    } catch (RemoteException e) {
-//      // TODO Que hacemos si falla el login
-//      e.printStackTrace();
-//    }
-
+    ServiceSoapProxy service = new ServiceSoapProxy();
+    doLogin(service);
+    List<InsertEvent> eventsToIntegrate = getEvents();
+    sendEvents(service, eventsToIntegrate);
+    doLogout(service);
   }
 
-  public void query() {
+  private void doLogout(ServiceSoapProxy service) {
+    try {
+      String result = service.logout();
+      System.out.println("Result logout >>> " + result);
+    } catch (RemoteException e) {
+      // TODO Que hacemos si falla el login
+      e.printStackTrace();
+    }
+  }
 
+  private void sendEvents(ServiceSoapProxy service, List<InsertEvent> eventsToIntegrate) {
+    try {
+      InsertEvent[] events = (InsertEvent[]) eventsToIntegrate.toArray();
+      String retult = service.insertEventBulk(events);
+      System.out.println("result events > " + retult);
+    } catch (RemoteException e) {
+      // TODO Que hacemos si falla el login
+      e.printStackTrace();
+    }
+  }
+
+  private void doLogin(ServiceSoapProxy service) {
+    try {
+      String result = service.login(user, pass);
+      System.out.println("Result login >>> " + result);
+    } catch (RemoteException e) {
+      // TODO Que hacemos si falla el login
+      e.printStackTrace();
+    }
+  }
+
+  public List<InsertEvent> getEvents() {
     Connection conn = null;
-
     String url = "jdbc:sqlserver://ADMINISTRATOR2;databaseName=8833test";
     Statement stmt = null;
     ResultSet result = null;
@@ -79,49 +99,62 @@ public class IntegrationControlTTask extends TimerTask {
       conn = DriverManager.getConnection(url, databaseUserName, databasePassword);
       stmt = conn.createStatement();
       result = null;
-      String carNO, machineNO, lon, lat, gpsTime, status, simNO, mileage, temperature;
-      int speed, direction;
+//      String carNO, machineNO, lon, lat, gpsTime, LastcommTime, status, simNO, mileage, temperature;
+//      int speed, direction;
+      
+      String dateQuery = FormatUtil.formatDateClient(this.lastSyncDate);
+      String query = "SELECT carNo, machineNO, lo, la, gpsTime, LastcommTime, status, speed, mileage, direction, simNO, temperature  FROM "
+          + "tPosition_last INNER JOIN tCar on tPosition_last.carID = tCar.carID "
+          + "WHERE carNO in (" + getPlatesQuery() + ") "
+          + "AND LastcommTime IS NOT NULL AND LastcommTime > CONVERT(DATETIME, '" + dateQuery + "', 20) "
+          + "ORDER BY LastcommTime ASC";
+      result = stmt.executeQuery(query);
 
-      result = stmt.executeQuery(
-          "select carNo, machineNO, lo, la, gpsTime, status, speed, mileage, direction, simNO, temperature  from tPosition_last, tCar where tPosition_last.carID = tCar.carID  and tlas....fecha > "
-              + this.lastSyncDate);
-
+      List<InsertEvent> events = new ArrayList<>();
       while (result.next()) {
-        carNO = result.getString("carNO");
-        machineNO = result.getString("machineNO");
-        gpsTime = result.getString("gpsTime");
-        status = result.getString("status");
-        speed = result.getInt("speed");
-        mileage = result.getString("mileage");
-        lon = result.getString("lo");
-        lat = result.getString("la");
-        direction = result.getInt("direction");
-        simNO = result.getString("simNO");
-        temperature = result.getString("temperature");
-        System.out.println(carNO + "," + machineNO + "," + gpsTime + "," + status + "," + speed + "," + mileage + "," + lon + "," + lat + "," + direction + ","
-            + simNO + "," + temperature);
-        // lastSyncDate = fecha mayor, la ultima fecha que sincronice
-
         InsertEvent event = new InsertEvent();
         event.setLincesePlate(result.getString("carNO"));
         event.setSerial(result.getString("machineNO"));
-        event.setDateEventAVL(FormatUtil.formatDateForControlT(new Date()));
+        event.setDateEventGPS(FormatUtil.formatDateForControlT(result.getDate("gpsTime")));
+        event.setHourEventGPS(FormatUtil.formatTimeForControlT(result.getDate("gpsTime")));
+        event.setDateEventAVL(FormatUtil.formatDateForControlT(result.getDate("LastcommTime")));
+        event.setHourEventAVL(FormatUtil.formatTimeForControlT(result.getDate("LastcommTime")));
+        event.setStatus(true);// Por defecto se debe de enviar 1
+        EventGps eventGps = EventResolver.resolve(result.getString("status"));
+        event.setCodeEvent(eventGps.getCode());
+        event.setCodeEventMessage(eventGps.getDescription());
+        event.setPriority(eventGps.getLevel());
+        event.setVelocity(result.getInt("speed"));
+        event.setOdometer(result.getFloat("mileage"));
+        event.setIgnition(eventGps.isOn());
+        event.setAltitude(0);// valor por defecto 0
+        event.setTemperature1(result.getShort("temperature"));
+        event.setTemperature2(result.getShort("temperature"));
+        event.setMovil(result.getString("simNO"));
+//        event.setBattery(null);//valor por defecto null
+        event.setLongitude(result.getFloat("lo"));
+        event.setLatitude(result.getFloat("la"));
+        AddressInfoDto address = AddressResolver.resolve(event.getLongitude(), event.getLatitude());
+        event.setCourse(address.getAddress().getState_district());
+        event.setAddress(address.getDisplay_name());
 
-        ServiceSoapProxy s = new ServiceSoapProxy();
-        try {
-          String result2 = s.login(user, pass);
-          System.out.println("Result login >>> " + result);
-          InsertEvent events[] = new InsertEvent[] { event };
-          s.insertEventBulk(events);
-        } catch (RemoteException e) {
-          // TODO Que hacemos si falla el login
-          e.printStackTrace();
-        }
+        this.lastSyncDate = result.getDate("LastcommTime");
+        events.add(event);
       }
       conn.close();
+      return events;
     } catch (Exception e) {
-      e.printStackTrace();
+      throw new LocalizateRuntimeException("No se pudo crear la lista de eventos, que hacemos?", e);
     }
+  }
+
+  private String getPlatesQuery() {
+    StringBuilder stringPlates = new StringBuilder();
+    this.plates.forEach(plate -> {
+      stringPlates.append("'" + plate + "',");
+    });
+    stringPlates.deleteCharAt(stringPlates.length()-1);
+    return stringPlates.toString();
   }
 
   public int getTries() {
@@ -137,3 +170,4 @@ public class IntegrationControlTTask extends TimerTask {
   }
 
 }
+

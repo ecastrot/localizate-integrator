@@ -1,16 +1,23 @@
 package com.localizate.integration.controlt;
 
 import java.util.Date;
+import java.util.Set;
 import java.util.Timer;
 
 import javax.annotation.PostConstruct;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+
+import com.localizate.integration.controlt.data.IntegrationControlTData;
 
 
 @Service
 public class IntegrationControlTService {
+  
+  @Autowired
+  private IntegrationControlTData integrationControlTData;
 
   @Value("${integration.controlt.time}")
   private long time;
@@ -25,7 +32,8 @@ public class IntegrationControlTService {
 
   @PostConstruct
   public void init() {
-    task = new IntegrationControlTTask(user, pass);
+    Set<String> plates = integrationControlTData.getPlates();
+    task = new IntegrationControlTTask(user, pass, plates);
     Timer timer = new Timer();
     timer.scheduleAtFixedRate(task, 0L, time);
   }
