@@ -1,7 +1,6 @@
 package com.localizate.integration.controlt;
 
 import java.util.Date;
-import java.util.Set;
 import java.util.Timer;
 
 import javax.annotation.PostConstruct;
@@ -32,8 +31,7 @@ public class IntegrationControlTService {
 
   @PostConstruct
   public void init() {
-    Set<String> plates = integrationControlTData.getPlates();
-    task = new IntegrationControlTTask(user, pass, plates);
+    task = new IntegrationControlTTask(user, pass, integrationControlTData);
     Timer timer = new Timer();
     timer.scheduleAtFixedRate(task, 0L, time);
   }

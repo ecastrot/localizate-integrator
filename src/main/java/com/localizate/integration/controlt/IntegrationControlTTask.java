@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.TimerTask;
 
+import com.localizate.integration.controlt.data.IntegrationControlTData;
 import com.localizate.integration.controlt.services.InsertEvent;
 import com.localizate.integration.controlt.services.ServiceSoapProxy;
 import com.localizate.integration.services.AddressInfoDto;
@@ -31,57 +32,33 @@ public class IntegrationControlTTask extends TimerTask {
 
   private Date lastSyncDate;
 
-  private Set<String> plates;
+  private IntegrationControlTData integrationControlTData;
 
-  public IntegrationControlTTask(String user, String pass, Set<String> plates) {
+  public IntegrationControlTTask(String user, String pass, IntegrationControlTData integrationControlTData) {
     super();
     this.user = user;
     this.pass = pass;
-    this.plates = plates;
+    this.integrationControlTData = integrationControlTData;
   }
 
   private int tries = 1;
 
   @Override
   public void run() {
-    //TODO iniciar last sync date, guardar esto en fisico
-    this.lastSyncDate = FormatUtil.getDateFromString("2021-03-11 19:00:00", FormatUtil.FORMAT_DATE_CLIENT);
+    this.lastSyncDate = FormatUtil.getDateFromString(this.integrationControlTData.getLastDateSync(), FormatUtil.FORMAT_DATE_CLIENT);
     System.out.println("Sync >> " + FormatUtil.formatDateClient(this.lastSyncDate));
-
     ServiceSoapProxy service = new ServiceSoapProxy();
-    doLogin(service);
     List<InsertEvent> eventsToIntegrate = getEvents();
     sendEvents(service, eventsToIntegrate);
-    doLogout(service);
-  }
-
-  private void doLogout(ServiceSoapProxy service) {
-    try {
-      String result = service.logout();
-      System.out.println("Result logout >>> " + result);
-    } catch (RemoteException e) {
-      // TODO Que hacemos si falla el login
-      e.printStackTrace();
-    }
+    this.integrationControlTData.updateDateSync(this.lastSyncDate);
   }
 
   private void sendEvents(ServiceSoapProxy service, List<InsertEvent> eventsToIntegrate) {
     try {
       InsertEvent[] events = (InsertEvent[]) eventsToIntegrate.toArray();
-      String retult = service.insertEventBulk(events);
-      System.out.println("result events > " + retult);
+      String result = service.insertEventAndLoginBulk(this.user, this.pass, events);
+      System.out.println("result events > " + result);
     } catch (RemoteException e) {
-      // TODO Que hacemos si falla el login
-      e.printStackTrace();
-    }
-  }
-
-  private void doLogin(ServiceSoapProxy service) {
-    try {
-      String result = service.login(user, pass);
-      System.out.println("Result login >>> " + result);
-    } catch (RemoteException e) {
-      // TODO Que hacemos si falla el login
       e.printStackTrace();
     }
   }
@@ -99,15 +76,11 @@ public class IntegrationControlTTask extends TimerTask {
       conn = DriverManager.getConnection(url, databaseUserName, databasePassword);
       stmt = conn.createStatement();
       result = null;
-//      String carNO, machineNO, lon, lat, gpsTime, LastcommTime, status, simNO, mileage, temperature;
-//      int speed, direction;
-      
+
       String dateQuery = FormatUtil.formatDateClient(this.lastSyncDate);
       String query = "SELECT carNo, machineNO, lo, la, gpsTime, LastcommTime, status, speed, mileage, direction, simNO, temperature  FROM "
-          + "tPosition_last INNER JOIN tCar on tPosition_last.carID = tCar.carID "
-          + "WHERE carNO in (" + getPlatesQuery() + ") "
-          + "AND LastcommTime IS NOT NULL AND LastcommTime > CONVERT(DATETIME, '" + dateQuery + "', 20) "
-          + "ORDER BY LastcommTime ASC";
+          + "tPosition_last INNER JOIN tCar on tPosition_last.carID = tCar.carID " + "WHERE carNO in (" + getPlatesQuery() + ") "
+          + "AND LastcommTime IS NOT NULL AND LastcommTime > CONVERT(DATETIME, '" + dateQuery + "', 20) " + "ORDER BY LastcommTime ASC";
       result = stmt.executeQuery(query);
 
       List<InsertEvent> events = new ArrayList<>();
@@ -115,10 +88,10 @@ public class IntegrationControlTTask extends TimerTask {
         InsertEvent event = new InsertEvent();
         event.setLincesePlate(result.getString("carNO"));
         event.setSerial(result.getString("machineNO"));
-        event.setDateEventGPS(FormatUtil.formatDateForControlT(result.getDate("gpsTime")));
-        event.setHourEventGPS(FormatUtil.formatTimeForControlT(result.getDate("gpsTime")));
-        event.setDateEventAVL(FormatUtil.formatDateForControlT(result.getDate("LastcommTime")));
-        event.setHourEventAVL(FormatUtil.formatTimeForControlT(result.getDate("LastcommTime")));
+        event.setDateEventGPS(FormatUtil.formatDateForControlT(result.getTimestamp("gpsTime")));
+        event.setHourEventGPS(FormatUtil.formatTimeForControlT(result.getTimestamp("gpsTime")));
+        event.setDateEventAVL(FormatUtil.formatDateForControlT(result.getTimestamp("LastcommTime")));
+        event.setHourEventAVL(FormatUtil.formatTimeForControlT(result.getTimestamp("LastcommTime")));
         event.setStatus(true);// Por defecto se debe de enviar 1
         EventGps eventGps = EventResolver.resolve(result.getString("status"));
         event.setCodeEvent(eventGps.getCode());
@@ -138,9 +111,10 @@ public class IntegrationControlTTask extends TimerTask {
         event.setCourse(address.getAddress().getState_district());
         event.setAddress(address.getDisplay_name());
 
-        this.lastSyncDate = result.getDate("LastcommTime");
+        this.lastSyncDate = result.getTimestamp("LastcommTime");
         events.add(event);
       }
+      System.out.println("\t Events to sync >> " + events.size());
       conn.close();
       return events;
     } catch (Exception e) {
@@ -150,10 +124,11 @@ public class IntegrationControlTTask extends TimerTask {
 
   private String getPlatesQuery() {
     StringBuilder stringPlates = new StringBuilder();
-    this.plates.forEach(plate -> {
+    Set<String> plates = this.integrationControlTData.getPlates();
+    plates.forEach(plate -> {
       stringPlates.append("'" + plate + "',");
     });
-    stringPlates.deleteCharAt(stringPlates.length()-1);
+    stringPlates.deleteCharAt(stringPlates.length() - 1);
     return stringPlates.toString();
   }
 
@@ -170,4 +145,3 @@ public class IntegrationControlTTask extends TimerTask {
   }
 
 }
-

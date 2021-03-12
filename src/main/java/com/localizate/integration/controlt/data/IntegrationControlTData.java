@@ -5,6 +5,7 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -14,6 +15,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import com.google.gson.Gson;
+import com.localizate.integration.util.FormatUtil;
 import com.localizate.integration.util.LocalizateRuntimeException;
 
 
@@ -73,6 +75,15 @@ public class IntegrationControlTData {
 
   public Set<String> getPlates() {
     return this.controlTData.getPlates();
+  }
+  
+  public String getLastDateSync() {
+    return this.controlTData.getLastDateSync();
+  }
+
+  public void updateDateSync(Date lastSyncDate) {
+    this.controlTData.setLastDateSync(FormatUtil.formatDateClient(lastSyncDate));
+    this.writeData();
   }
 
 }
