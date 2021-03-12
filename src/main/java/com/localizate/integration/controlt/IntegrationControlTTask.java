@@ -55,7 +55,7 @@ public class IntegrationControlTTask extends TimerTask {
 
   private void sendEvents(ServiceSoapProxy service, List<InsertEvent> eventsToIntegrate) {
     try {
-      InsertEvent[] events = (InsertEvent[]) eventsToIntegrate.toArray();
+      InsertEvent[] events = eventsToIntegrate.stream().toArray(InsertEvent[]::new);
       String result = service.insertEventAndLoginBulk(this.user, this.pass, events);
       System.out.println("result events > " + result);
     } catch (RemoteException e) {

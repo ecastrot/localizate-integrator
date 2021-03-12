@@ -13,7 +13,7 @@ import java.util.Locale;
 public class FormatUtil {
   public static final String FORMAT_DATE_CLIENT = "yyyy-MM-dd HH:mm:ss";
 
-  public static final String FORMAT_DATE_CONTROL_T = "MM/dd/AAAA";
+  public static final String FORMAT_DATE_CONTROL_T = "MM/dd/YYYY";
   
   public static final String FORMAT_TIME_CONTROL_T = "HH:mm:ss";
   

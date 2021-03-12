@@ -23,6 +23,7 @@ dependencies {
 	implementation group: 'commons-discovery', name: 'commons-discovery', version: '0.5'
 	implementation group: 'wsdl4j', name: 'wsdl4j', version: '1.6.2'	
 	implementation group: 'com.google.code.gson', name: 'gson', version: '2.7'
+	implementation group: 'com.microsoft.sqlserver', name: 'mssql-jdbc', version: '8.4.1.jre8'
 }
 
 test {
